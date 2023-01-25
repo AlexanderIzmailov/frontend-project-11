@@ -36,7 +36,7 @@ const setFeedback = (text, type) => {
   feedbackField.textContent = text;
 };
 
-const renderFeeds = (state) => {
+const renderFeeds = (state, i18next) => {
   setActiveRssForm(true);
 
   const feeds = document.querySelector('.feeds');
@@ -47,7 +47,7 @@ const renderFeeds = (state) => {
     feeds.appendChild(feedDiv);
 
     const feedTitle = createElWithClassesAndText('div', ['card-body']);
-    const title = createElWithClassesAndText('h2', ['card-title', 'h4'], 'Feeds');
+    const title = createElWithClassesAndText('h2', ['card-title', 'h4'], i18next.t('feedsTitle'));
     feedTitle.appendChild(title);
     feedDiv.appendChild(feedTitle);
 
@@ -67,13 +67,13 @@ const renderFeeds = (state) => {
     });
   }
 
-  setFeedback('RSS успешно загружен', 'success');
+  setFeedback(i18next.t('successAdding'), 'success');
 
   document.querySelector('form').reset();
   document.querySelector('#url-input').focus();
 };
 
-export default (state) => {
+export default (state, i18next) => {
   const watcher = onChange(state, (path, value) => {
     // if (path === 'feeds') {
     //   renderFeeds(watcher);
@@ -85,7 +85,7 @@ export default (state) => {
 
     if (path === 'rssForm.state') {
       if (value === 'filling') {
-        renderFeeds(watcher);
+        renderFeeds(watcher, i18next);
       }
 
       if (value === 'sending') {
@@ -93,7 +93,8 @@ export default (state) => {
       }
 
       if (value === 'failed') {
-        setFeedback(watcher.rssForm.error, 'failed');
+        // setFeedback(watcher.rssForm.error, 'failed');
+        setFeedback(i18next.t(watcher.rssForm.error), 'failed');
       }
     }
   });
