@@ -1,5 +1,14 @@
 import onChange from 'on-change';
 
+const setActiveRssForm = (isActive) => {
+  const button = document.querySelector('button[aria-label="add"]');
+  if (isActive) {
+    button.classList.remove('disabled');
+  } else {
+    button.classList.add('disabled');
+  }
+};
+
 const createElWithClassesAndText = (element, classes, text = '') => {
   const newElement = document.createElement(element);
   newElement.classList.add(...classes);
@@ -28,6 +37,8 @@ const setFeedback = (text, type) => {
 };
 
 const renderFeeds = (state) => {
+  setActiveRssForm(true);
+
   const feeds = document.querySelector('.feeds');
   feeds.innerHTML = '';
 
@@ -63,13 +74,27 @@ const renderFeeds = (state) => {
 };
 
 export default (state) => {
-  const watcher = onChange(state, (path) => {
-    if (path === 'feeds') {
-      renderFeeds(watcher);
-    }
+  const watcher = onChange(state, (path, value) => {
+    // if (path === 'feeds') {
+    //   renderFeeds(watcher);
+    // }
 
-    if (path === 'rssForm.error') {
-      setFeedback(watcher.rssForm.error, 'failed');
+    // if (path === 'rssForm.error') {
+    //   setFeedback(watcher.rssForm.error, 'failed');
+    // }
+
+    if (path === 'rssForm.state') {
+      if (value === 'filling') {
+        renderFeeds(watcher);
+      }
+
+      if (value === 'sending') {
+        setActiveRssForm(false);
+      }
+
+      if (value === 'failed') {
+        setFeedback(watcher.rssForm.error, 'failed');
+      }
     }
   });
 

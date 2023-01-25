@@ -30,7 +30,7 @@ const app = () => {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    initialState.rssForm.error = null;
+    initialState.rssForm.state = null;
 
     const urlSchema = object({
       url: string().url().required().notOneOf(state.feeds),
@@ -41,12 +41,19 @@ const app = () => {
 
     urlSchema.validate({ url })
       .then(() => {
+        state.rssForm.state = 'sending';
+        // Wait for result
         state.feeds.push(url);
+        // Wait for result
+        setTimeout(() => {
+          state.rssForm.state = 'filling';
+        }, 1000);
+        // if something went wrong: state.rssForm.state = 'failed' 
       })
       .catch((error) => {
         console.log('State :', initialState);
-        state.rssForm.state = 'failed';
         state.rssForm.error = error.toString().split(':')[1].trim();
+        state.rssForm.state = 'failed';
       });
   });
 };
