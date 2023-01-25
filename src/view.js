@@ -54,13 +54,13 @@ const renderFeeds = (state) => {
     const feedList = createElWithClassesAndText('ul', ['list-group', 'border-0', 'rounded-0']);
     feedDiv.appendChild(feedList);
 
-    state.feeds.forEach((feed) => {
+    state.feeds.forEach(({ name, description }) => {
       const li = createElWithClassesAndText('li', ['list-group-item', 'border-0', 'border-end-0']);
 
-      const liTitle = createElWithClassesAndText('h3', ['h6', 'm-0'], feed);
+      const liTitle = createElWithClassesAndText('h3', ['h6', 'm-0'], name);
       li.appendChild(liTitle);
 
-      const liDesc = createElWithClassesAndText('p', ['m-0', 'small', 'text-black-50'], `Description for ${feed}`);
+      const liDesc = createElWithClassesAndText('p', ['m-0', 'small', 'text-black-50'], `Description for ${description}`);
       li.appendChild(liDesc);
 
       feedList.appendChild(li);

@@ -5,6 +5,8 @@ import watcher from './view.js';
 
 console.log('Start');
 
+const getFeedList = (feeds) => feeds.map(({ name }) => name);
+
 const app = () => {
   const initialState = {
     rssForm: {
@@ -32,8 +34,9 @@ const app = () => {
 
     initialState.rssForm.state = null;
 
+    const feedList = getFeedList(state.feeds);
     const urlSchema = object({
-      url: string().url().required().notOneOf(state.feeds),
+      url: string().url().required().notOneOf(feedList),
     });
 
     const formData = new FormData(e.target);
@@ -43,12 +46,15 @@ const app = () => {
       .then(() => {
         state.rssForm.state = 'sending';
         // Wait for result
-        state.feeds.push(url);
+
+        // Create test feed
+        state.feeds.push({ name: url, description: `Description for ${url}` });
+
         // Wait for result
         setTimeout(() => {
           state.rssForm.state = 'filling';
         }, 1000);
-        // if something went wrong: state.rssForm.state = 'failed' 
+        // if something went wrong: state.rssForm.state = 'failed'
       })
       .catch((error) => {
         console.log('State :', initialState);
