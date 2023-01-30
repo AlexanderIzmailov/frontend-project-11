@@ -54,13 +54,13 @@ const renderFeeds = (state, i18next) => {
     const feedList = createElWithClassesAndText('ul', ['list-group', 'border-0', 'rounded-0']);
     feedDiv.appendChild(feedList);
 
-    state.feeds.forEach(({ name, description }) => {
+    state.feeds.forEach(({ title, description }) => {
       const li = createElWithClassesAndText('li', ['list-group-item', 'border-0', 'border-end-0']);
 
-      const liTitle = createElWithClassesAndText('h3', ['h6', 'm-0'], name);
+      const liTitle = createElWithClassesAndText('h3', ['h6', 'm-0'], title);
       li.appendChild(liTitle);
 
-      const liDesc = createElWithClassesAndText('p', ['m-0', 'small', 'text-black-50'], `Description for ${description}`);
+      const liDesc = createElWithClassesAndText('p', ['m-0', 'small', 'text-black-50'], description);
       li.appendChild(liDesc);
 
       feedList.appendChild(li);
@@ -72,6 +72,45 @@ const renderFeeds = (state, i18next) => {
   document.querySelector('form').reset();
   document.querySelector('#url-input').focus();
 };
+
+const renderPosts = (state, i18next) => {
+  const posts = document.querySelector('.posts');
+  posts.innerHTML = '';
+
+  if (state.posts.length > 0) {
+    const postsDiv = createElWithClassesAndText('div', ['card', 'border-0']);
+    posts.appendChild(postsDiv);
+
+    const postsTitle = createElWithClassesAndText('div', ['card-body']);
+    const title = createElWithClassesAndText('h2', ['card-title', 'h4'], i18next.t('postsTitle'));
+    postsTitle.appendChild(title);
+    postsDiv.appendChild(postsTitle);
+
+    const postsList = createElWithClassesAndText('ul', ['list-group', 'border-0', 'rounded-0']);
+    postsDiv.appendChild(postsList);
+
+    state.posts.forEach(({ title, link, description, id }) => {
+      const li = createElWithClassesAndText('li',
+      [
+        'list-group-item',
+        'd-flex',
+        'justify-content-between',
+        'align-items-start',
+        'border-0',
+        'border-end-0',
+      ]);
+
+      const a = createElWithClassesAndText('a', ['fw-bold'], title);
+      a.setAttribute('href', new URL (link));
+      a.setAttribute('data-id', id);
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener noreferrer');
+
+      li.appendChild(a);
+      postsList.appendChild(li);
+    })
+  }
+}
 
 export default (state, i18next) => {
   const watcher = onChange(state, (path, value) => {
@@ -86,6 +125,7 @@ export default (state, i18next) => {
     if (path === 'rssForm.state') {
       if (value === 'filling') {
         renderFeeds(watcher, i18next);
+        renderPosts(watcher, i18next);
       }
 
       if (value === 'sending') {
