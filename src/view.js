@@ -36,23 +36,27 @@ const setFeedback = (text, type) => {
   feedbackField.textContent = text;
 };
 
-const renderFeeds = (state, i18next) => {
-  setActiveRssForm(true);
+const createListWrapper = (location, title) => {
+  const mainDiv = createElWithClassesAndText('div', ['card', 'border-0']);
+  location.appendChild(mainDiv);
 
+  const titleDiv = createElWithClassesAndText('div', ['card-body']);
+  const titleText = createElWithClassesAndText('h2', ['card-title', 'h4'], title);
+  titleDiv.appendChild(titleText);
+  mainDiv.appendChild(titleDiv);
+
+  const ul = createElWithClassesAndText('ul', ['list-group', 'border-0', 'rounded-0']);
+  mainDiv.appendChild(ul);
+
+  return ul;
+};
+
+const renderFeeds = (state, i18next) => {
   const feeds = document.querySelector('.feeds');
   feeds.innerHTML = '';
 
   if (state.feeds.length > 0) {
-    const feedDiv = createElWithClassesAndText('div', ['card', 'border-0']);
-    feeds.appendChild(feedDiv);
-
-    const feedTitle = createElWithClassesAndText('div', ['card-body']);
-    const title = createElWithClassesAndText('h2', ['card-title', 'h4'], i18next.t('feedsTitle'));
-    feedTitle.appendChild(title);
-    feedDiv.appendChild(feedTitle);
-
-    const feedList = createElWithClassesAndText('ul', ['list-group', 'border-0', 'rounded-0']);
-    feedDiv.appendChild(feedList);
+    const feedList = createListWrapper(feeds, i18next.t('feedsTitle'));
 
     state.feeds.forEach(({ title, description }) => {
       const li = createElWithClassesAndText('li', ['list-group-item', 'border-0', 'border-end-0']);
@@ -66,9 +70,9 @@ const renderFeeds = (state, i18next) => {
       feedList.appendChild(li);
     });
   }
+};
 
-  setFeedback(i18next.t('successAdding'), 'success');
-
+const resetRssForm = () => {
   document.querySelector('form').reset();
   document.querySelector('#url-input').focus();
 };
@@ -78,39 +82,34 @@ const renderPosts = (state, i18next) => {
   posts.innerHTML = '';
 
   if (state.posts.length > 0) {
-    const postsDiv = createElWithClassesAndText('div', ['card', 'border-0']);
-    posts.appendChild(postsDiv);
+    const postsList = createListWrapper(posts, i18next.t('postsTitle'));
 
-    const postsTitle = createElWithClassesAndText('div', ['card-body']);
-    const title = createElWithClassesAndText('h2', ['card-title', 'h4'], i18next.t('postsTitle'));
-    postsTitle.appendChild(title);
-    postsDiv.appendChild(postsTitle);
-
-    const postsList = createElWithClassesAndText('ul', ['list-group', 'border-0', 'rounded-0']);
-    postsDiv.appendChild(postsList);
-
-    state.posts.forEach(({ title, link, description, id }) => {
-      const li = createElWithClassesAndText('li',
-      [
-        'list-group-item',
-        'd-flex',
-        'justify-content-between',
-        'align-items-start',
-        'border-0',
-        'border-end-0',
-      ]);
+    state.posts.forEach(({
+      title, link, id,
+    }) => {
+      const li = createElWithClassesAndText(
+        'li',
+        [
+          'list-group-item',
+          'd-flex',
+          'justify-content-between',
+          'align-items-start',
+          'border-0',
+          'border-end-0',
+        ],
+      );
 
       const a = createElWithClassesAndText('a', ['fw-bold'], title);
-      a.setAttribute('href', new URL (link));
+      a.setAttribute('href', new URL(link));
       a.setAttribute('data-id', id);
       a.setAttribute('target', '_blank');
       a.setAttribute('rel', 'noopener noreferrer');
 
       li.appendChild(a);
       postsList.appendChild(li);
-    })
+    });
   }
-}
+};
 
 export default (state, i18next) => {
   const watcher = onChange(state, (path, value) => {
@@ -126,6 +125,9 @@ export default (state, i18next) => {
       if (value === 'filling') {
         renderFeeds(watcher, i18next);
         renderPosts(watcher, i18next);
+        setFeedback(i18next.t('successAdding'), 'success');
+        resetRssForm();
+        setActiveRssForm(true);
       }
 
       if (value === 'sending') {
@@ -133,8 +135,8 @@ export default (state, i18next) => {
       }
 
       if (value === 'failed') {
-        // setFeedback(watcher.rssForm.error, 'failed');
         setFeedback(i18next.t(watcher.rssForm.error), 'failed');
+        setActiveRssForm(true);
       }
     }
   });

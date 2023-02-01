@@ -9,6 +9,49 @@ console.log('Start');
 
 const getFeedList = (feeds) => feeds.map(({ url }) => url);
 
+const getProxyLink = (url) => {
+  const proxy = 'https://allorigins.hexlet.app';
+  const resultUrl = new URL('get', proxy);
+  resultUrl.searchParams.set('disableCache', true);
+  resultUrl.searchParams.set('url', url);
+
+  return resultUrl;
+};
+
+const parsRss = (response) => {
+  const parser = new DOMParser();
+  const parsedResponse = parser.parseFromString(response.data.contents, 'application/xml');
+  const items = parsedResponse.querySelectorAll('item');
+
+  const posts = Array.from(items).reduce((acc, item) => {
+    const newPost = {};
+    Array.from(item.children).forEach((child) => {
+      newPost[child.tagName] = child.textContent;
+    });
+    acc.push(newPost);
+    return acc;
+  }, []);
+
+  return {
+    feed: {
+      title: parsedResponse.querySelector('title').textContent,
+      description: parsedResponse.querySelector('description').textContent,
+      url: response.config.url.searchParams.get('url'),
+    },
+    posts,
+  };
+};
+
+const setIds = (parsedRss, state) => {
+  const feedId = state.feeds.length + 1;
+  let postStartId = state.posts.length;
+
+  // eslint-disable-next-line
+  const newPosts = parsedRss.posts.map((post) => ({ ...post, feedId, id: postStartId += 1 }));
+
+  return { ...parsedRss, feed: { ...parsedRss.feed, id: feedId }, posts: newPosts };
+};
+
 export default async () => {
   const i18next = i18n.createInstance();
   await i18next.init({
@@ -23,7 +66,8 @@ export default async () => {
           errors: {
             alreadyExist: 'RSS уже существует',
             invalidUrl: 'Ссылка должна быть валидным URL',
-            thereIsNoRss: 'Ресурс не содержит валидный RSS',
+            missingRss: 'Ресурс не содержит валидный RSS',
+            networkError: 'Ошибка сети',
           },
         },
       },
@@ -58,7 +102,7 @@ export default async () => {
     initialState.rssForm.state = null;
 
     const feedList = getFeedList(state.feeds);
-    // console.log('feedList :', feedList);
+
     const urlSchema = object({
       url: string().url().required().notOneOf(feedList),
     });
@@ -69,23 +113,26 @@ export default async () => {
     urlSchema.validate({ url })
       .then(() => {
         state.rssForm.state = 'sending';
-        // Wait for result
 
         return axios.get(getProxyLink(url)).then((response) => {
           const parsedRss = parsRss(response);
           const parsedRssWithIds = setIds(parsedRss, state);
-          // console.log('parsedRss :', parsedRss);
           console.log('parsedRssWithId :', parsedRssWithIds);
+
           state.feeds.unshift(parsedRssWithIds.feed);
           state.posts = parsedRssWithIds.posts.concat(state.posts);
           state.rssForm.state = 'filling';
         })
-        .catch(() => {
-          // console.log('ERROR INSIDE :', error);
-          throw {
-            errors: ['errors.thereIsNoRss'],
-          }
-        })
+          .catch((error) => {
+            let err;
+            if (error.request) {
+              err = { errors: ['errors.networkError'] };
+            } else {
+              err = { errors: ['errors.missingRss'] };
+            }
+            // throw Object.create({ errors: ['errors.missingRss'] });
+            throw err;
+          });
 
         // state.feeds.push({ name: url, description: `Description for ${url}` });
         // state.rssForm.state = 'filling';
@@ -97,8 +144,6 @@ export default async () => {
         // if something went wrong: state.rssForm.state = 'failed'
       })
       .catch((err) => {
-        console.log ('ERROR :', err)
-        console.log ('ERROR2 :', JSON.stringify(err))
         const [error] = err.errors;
         state.rssForm.error = error;
         state.rssForm.state = 'failed';
@@ -114,58 +159,12 @@ export default async () => {
       .then((res) => {
         const data = res.data.contents;
         const parser = new DOMParser();
-        const doc1 = parser.parseFromString(data, "application/xml");
+        const doc1 = parser.parseFromString(data, 'application/xml');
         const items = doc1.querySelectorAll('item');
-        // items.forEach((item) => {
-        //   console.log(item.querySelector('title').textContent)
-        // })
-        console.log(res.data)
-      })
-  })
+        items.forEach((item) => {
+          console.log(item.querySelector('title').textContent);
+        });
+        console.log(res.data);
+      });
+  });
 };
-
-const parsRss = (response) => {
-  // console.log('response :', response)
-  const parser = new DOMParser();
-  const data = response.data.contents;
-  const parsedDoc = parser.parseFromString(data, "application/xml");
-  const items = parsedDoc.querySelectorAll('item');
-  const url = response.config.url.searchParams.get('url');
-
-  const posts = Array.from(items).reduce((acc, item) => {
-    const newPost = {};
-    Array.from(item.children).forEach((child) => {
-      newPost[child.tagName] = child.textContent;
-    })
-    acc.push(newPost);
-    return acc;
-  }, []);
-
-  return {
-    feed: {
-      title: parsedDoc.querySelector('title').textContent,
-      description: parsedDoc.querySelector('description').textContent,
-      url,
-    },
-    posts,
-  }
-}
-
-const setIds = (parsedRss, state) => {
-  const feedId = state.feeds.length + 1;
-  let postStartId = state.posts.length;
-
-  const newPosts = parsedRss.posts.map((post) => ({ ...post, feedId, id: postStartId += 1 }));
-
-  return { ...parsedRss, feed: { ...parsedRss.feed, id: feedId }, posts: newPosts };
-}
-
-const getProxyLink = (url) => {
-  const proxy = 'https://allorigins.hexlet.app';
-  const resultUrl = new URL ('get', proxy);
-  resultUrl.searchParams.set('disableCache', true);
-  resultUrl.searchParams.set('url', url)
-  // return `${proxy}${url}`;
-  // return new URL(proxy, url);
-  return resultUrl;
-}
