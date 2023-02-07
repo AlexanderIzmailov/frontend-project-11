@@ -4,6 +4,9 @@ import { object, string, setLocale } from 'yup';
 import i18n from 'i18next';
 import axios from 'axios';
 import watcher from './view.js';
+// import errorCodes from './errorCodes.js';
+import { codes, MyError } from './errorHandlers.js';
+import { parsRssPromise, setIdsPromise } from './parser.js';
 
 console.log('Start');
 
@@ -18,40 +21,6 @@ const getProxyLink = (url) => {
   return resultUrl;
 };
 
-const parsRss = (response) => {
-  const parser = new DOMParser();
-  const parsedResponse = parser.parseFromString(response.data.contents, 'application/xml');
-  const items = parsedResponse.querySelectorAll('item');
-
-  const posts = Array.from(items).reduce((acc, item) => {
-    const newPost = {};
-    Array.from(item.children).forEach((child) => {
-      newPost[child.tagName] = child.textContent;
-    });
-    acc.push(newPost);
-    return acc;
-  }, []);
-
-  return {
-    feed: {
-      title: parsedResponse.querySelector('title').textContent,
-      description: parsedResponse.querySelector('description').textContent,
-      url: response.config.url.searchParams.get('url'),
-    },
-    posts,
-  };
-};
-
-const setIds = (parsedRss, state) => {
-  const feedId = state.feeds.length + 1;
-  let postStartId = state.posts.length;
-
-  // eslint-disable-next-line
-  const newPosts = parsedRss.posts.map((post) => ({ ...post, feedId, id: postStartId += 1 }));
-
-  return { ...parsedRss, feed: { ...parsedRss.feed, id: feedId }, posts: newPosts };
-};
-
 export default async () => {
   const i18next = i18n.createInstance();
   await i18next.init({
@@ -64,10 +33,10 @@ export default async () => {
           feedsTitle: 'Фиды',
           postsTitle: 'Посты',
           errors: {
-            alreadyExist: 'RSS уже существует',
-            invalidUrl: 'Ссылка должна быть валидным URL',
-            missingRss: 'Ресурс не содержит валидный RSS',
-            networkError: 'Ошибка сети',
+            notOneOf: 'RSS уже существует',
+            url: 'Ссылка должна быть валидным URL',
+            rss: 'Ресурс не содержит валидный RSS',
+            network: 'Ошибка сети',
           },
         },
       },
@@ -87,10 +56,19 @@ export default async () => {
 
   setLocale({
     mixed: {
-      notOneOf: 'errors.alreadyExist',
+      // notOneOf: 'errors.alreadyExist',
+      notOneOf: () => {
+        // throw { msg: 'errors.alreadyExist', code: 'ERR_NOT_ONE_OF' }
+        throw new MyError('ERR_NOT_ONE_OF');
+      },
     },
     string: {
-      url: 'errors.invalidUrl',
+      // url: 'errors.invalidUrl',
+      url: () => {
+        // throw { msg: 'errors.alreadyExist', code: 'ERR_URL' }
+        // throw new Error({ msg: 'errors.alreadyExist', code: 'ERR_URL' });
+        throw new MyError('ERR_URL');
+      },
     },
   });
 
@@ -108,44 +86,21 @@ export default async () => {
     });
 
     const formData = new FormData(e.target);
-    const url = formData.get('url');
 
-    urlSchema.validate({ url })
-      .then(() => {
+    urlSchema.validate(Object.fromEntries(formData))
+      .then((validated) => {
         state.rssForm.state = 'sending';
-
-        return axios.get(getProxyLink(url)).then((response) => {
-          const parsedRss = parsRss(response);
-          const parsedRssWithIds = setIds(parsedRss, state);
-          console.log('parsedRssWithId :', parsedRssWithIds);
-
-          state.feeds.unshift(parsedRssWithIds.feed);
-          state.posts = parsedRssWithIds.posts.concat(state.posts);
-          state.rssForm.state = 'filling';
-        })
-          .catch((error) => {
-            let err;
-            if (error.request) {
-              err = { errors: ['errors.networkError'] };
-            } else {
-              err = { errors: ['errors.missingRss'] };
-            }
-            // throw Object.create({ errors: ['errors.missingRss'] });
-            throw err;
-          });
-
-        // state.feeds.push({ name: url, description: `Description for ${url}` });
-        // state.rssForm.state = 'filling';
-
-        // Wait for result
-        // setTimeout(() => {
-        //   state.rssForm.state = 'filling';
-        // }, 1000);
-        // if something went wrong: state.rssForm.state = 'failed'
+        return axios.get(getProxyLink(validated.url));
+      })
+      .then((response) => parsRssPromise(response))
+      .then((parsedRss) => setIdsPromise(parsedRss, state))
+      .then((parsedRssWithIds) => {
+        state.feeds.unshift(parsedRssWithIds.feed);
+        state.posts = parsedRssWithIds.posts.concat(state.posts);
+        state.rssForm.state = 'filling';
       })
       .catch((err) => {
-        const [error] = err.errors;
-        state.rssForm.error = error;
+        state.rssForm.error = codes[err.code];
         state.rssForm.state = 'failed';
       });
   });
@@ -153,18 +108,24 @@ export default async () => {
   // Test
   const testButton = document.querySelector('#test-button');
   testButton.addEventListener('click', () => {
-    const origin = 'https://allorigins.hexlet.app/get?disableCache=true&url=';
-    const address = 'https://example.com';
-    axios.get(`${origin}${address}`)
-      .then((res) => {
-        const data = res.data.contents;
-        const parser = new DOMParser();
-        const doc1 = parser.parseFromString(data, 'application/xml');
-        const items = doc1.querySelectorAll('item');
-        items.forEach((item) => {
-          console.log(item.querySelector('title').textContent);
-        });
-        console.log(res.data);
-      });
+    // const origin = 'https://allorigins.hexlet.app/get?disableCache=true&url=';
+    // const address = 'https://example.com';
+    // axios.get(`${origin}${address}`)
+    //   .then((res) => {
+    //     const data = res.data.contents;
+    //     const parser = new DOMParser();
+    //     const doc1 = parser.parseFromString(data, 'application/xml');
+    //     const items = doc1.querySelectorAll('item');
+    //     items.forEach((item) => {
+    //       console.log(item.querySelector('title').textContent);
+    //     });
+    //     console.log(res.data);
+    //   });
+    try {
+      throw new MyError('Test');
+    } catch (e) {
+      console.log('ERROR :', e);
+      console.log('Code :', e.code);
+    }
   });
 };
