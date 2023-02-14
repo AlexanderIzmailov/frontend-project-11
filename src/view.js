@@ -139,6 +139,12 @@ export default (state, i18next) => {
         setActiveRssForm(true);
       }
     }
+
+    if (path === 'autoUpdate.state') {
+      if (value === 'updated') {
+        renderPosts(watcher, i18next);
+      }
+    }
   });
 
   return watcher;

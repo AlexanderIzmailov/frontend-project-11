@@ -24,7 +24,7 @@ import { MyError } from './errorHandlers.js';
 //   };
 // };
 
-export const parsRssPromise = (response) => {
+export const parseRssPromise = (response) => {
   const p = new Promise((resolve, reject) => {
     const parser = new DOMParser();
     const parsedResponse = parser.parseFromString(response.data.contents, 'application/xml');
@@ -68,16 +68,37 @@ export const parsRssPromise = (response) => {
 //   return { ...parsedRss, feed: { ...parsedRss.feed, id: feedId }, posts: newPosts };
 // };
 
-export const setIdsPromise = (parsedRss, state) => {
+export const setIdsParsedRssPromise = (parsedRss, state) => {
   const feedId = state.feeds.length + 1;
   let postStartId = state.posts.length;
 
-  // eslint-disable-next-line
-  const newPosts = parsedRss.posts.map((post) => ({ ...post, feedId, id: postStartId += 1 }));
+  const newPosts = parsedRss.posts
+    .reverse()
+    .map((post) => ({ ...post, feedId, id: postStartId += 1 })); // eslint-disable-line
 
-  const result = { ...parsedRss, feed: { ...parsedRss.feed, id: feedId }, posts: newPosts };
+  const result = {
+    ...parsedRss,
+    feed: { ...parsedRss.feed, id: feedId },
+    posts: newPosts.reverse(),
+  };
 
   return new Promise((resolve) => {
     resolve(result);
   });
 };
+
+// export const setIdsParsedRssPromise = (parsedRss, state) => {
+//   const feedId = state.feeds.length + 1;
+//   const newPostsLength = parsedRss.posts.length;
+//   let postStartId = state.posts.length + newPostsLength + 1;
+//   console.log('Start ID: ', postStartId);
+
+//   // eslint-disable-next-line
+//   const newPosts = parsedRss.posts.map((post) => ({ ...post, feedId, id: postStartId -= 1 }));
+
+//   const result = { ...parsedRss, feed: { ...parsedRss.feed, id: feedId }, posts: newPosts };
+
+//   return new Promise((resolve) => {
+//     resolve(result);
+//   });
+// };

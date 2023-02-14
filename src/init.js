@@ -1,12 +1,12 @@
 import './styles.scss';
 import 'bootstrap';
-import { object, string, setLocale } from 'yup';
+import { object, string, setLocale, ref } from 'yup';
 import i18n from 'i18next';
 import axios from 'axios';
 import watcher from './view.js';
 // import errorCodes from './errorCodes.js';
 import { codes, MyError } from './errorHandlers.js';
-import { parsRssPromise, setIdsPromise } from './parser.js';
+import { parseRssPromise, setIdsParsedRssPromise } from './parser.js';
 
 console.log('Start');
 
@@ -50,6 +50,10 @@ export default async () => {
     },
     feeds: [],
     posts: [],
+    autoUpdate: {
+      state: null,
+      delay: 5000,
+    },
   };
 
   const state = watcher(initialState, i18next);
@@ -92,12 +96,17 @@ export default async () => {
         state.rssForm.state = 'sending';
         return axios.get(getProxyLink(validated.url));
       })
-      .then((response) => parsRssPromise(response))
-      .then((parsedRss) => setIdsPromise(parsedRss, state))
+      .then((response) => parseRssPromise(response))
+      .then((parsedRss) => setIdsParsedRssPromise(parsedRss, state))
       .then((parsedRssWithIds) => {
         state.feeds.unshift(parsedRssWithIds.feed);
-        state.posts = parsedRssWithIds.posts.concat(state.posts);
+        state.posts.unshift( ...parsedRssWithIds.posts );
         state.rssForm.state = 'filling';
+        if (!state.updateState) {
+          state.updateState = true;
+          startUpdate(state, state.autoUpdate.delay);
+        }
+        console.log('State: ', state);
       })
       .catch((err) => {
         state.rssForm.error = codes[err.code];
@@ -121,11 +130,120 @@ export default async () => {
     //     });
     //     console.log(res.data);
     //   });
-    try {
-      throw new MyError('Test');
-    } catch (e) {
-      console.log('ERROR :', e);
-      console.log('Code :', e.code);
-    }
+
+    // refresh(state);
+    clearTimeout(state.timerId);
   });
+};
+
+const getNewPosts = (currentPosts, receivedPosts, feedId) => {
+  const currentGuids = currentPosts.map((post) => post.guid);
+  const newPosts = receivedPosts.filter((post) => !currentGuids.includes(post.guid));
+  const newPostsWithFeedId = newPosts.map((post) => ({ ...post, feedId}))
+
+  return new Promise((resolve) => {
+    resolve(newPostsWithFeedId);
+  });
+};
+
+const setIdForUpdatedPosts = (posts, state) => {
+  let postStartId = state.posts.length;
+  const postsWithId = posts.reverse().map((post) => ({ ...post, id: postStartId += 1}));
+  
+  return new Promise ((resolve) => {
+    resolve(postsWithId.reverse());
+  })
+};
+
+const startUpdate = (state, delay) => {
+  
+  const update = (state, delay) => {
+    console.log('UPDATE')
+    const { feeds, posts } = state;
+
+    state.autoUpdate.state = 'pending';
+
+    const newPostsP = feeds.map((feed) => {
+      const { id, url } = feed;
+      return axios.get(getProxyLink(new URL(url)))
+        .then((response) => parseRssPromise(response))
+        .then((parsedRss) => {
+          return getNewPosts(
+            posts.filter((post) => post.feedId === id),
+            parsedRss.posts,
+            id,
+          )
+        })
+        .catch(() => []);
+    });
+
+    Promise.all(newPostsP)
+      .then((newPostsLists) => setIdForUpdatedPosts(newPostsLists.flat(), state))
+      .then((result) => {
+        if (result.length) {
+          state.posts = result.concat(state.posts);
+          state.autoUpdate.state = 'updated';
+        } else {
+          state.autoUpdate.state = 'noUpdate';
+        }
+      })
+      .finally(() => {
+        startUpdate(state, delay);
+      })
+  };
+
+  state.timerId = setTimeout(() => update(state, delay), delay);
+
+    // Promise.all(newPostsP)
+    // .then((newPostsLists) => setIdsParsedRssPromise({ posts: newPostsLists.flat() }, state))
+    // .then((result) => {
+    //   if (result.length) {
+    //     state.updateState = 'pending';
+    //     state.posts = result.posts.concat(state.posts);
+    //     state.updateState = 'done';
+    //   }
+    // })
+    // .finally(() => {
+    //   setTimeout(() => refresh(state), 5000);
+    // })
+
+    // Promise.all(newPostsP)
+    // .then((newPostsLists) => {
+    //   const posts = newPostsLists.flat();
+    //   if (posts.length) {
+    //     return setIdsParsedRssPromise({ posts }, state)
+    //   }
+    // })
+    // .then((result) => {
+    //   if (!result) {
+    //     state.updateState = 'noUpdates';
+    //   } else {
+    //     state.posts = result.posts.concat(state.posts);
+    //     state.updateState = 'updated';
+    //   }
+    // })
+    // .finally(() => {
+    //   setTimeout(() => refresh(state), 5000);
+    // })
+
+  // Promise.all(newPostsP)
+  //   .then((newPostsLists) => {
+  //     const posts = newPostsLists.flat();
+  //     if (!posts.length) {
+  //       state.updateState = 'noUpdates';
+  //       return
+  //     }
+  //     setIdsParsedRssPromise({ posts }, state)
+  //       .then((result) => {
+  //         state.posts = result.posts.concat(state.posts);
+  //         state.updateState = 'updated';
+  //       })
+  //   })
+  //   .finally(() => {
+  //     console.log('SET TIMER!');
+  //     state.timerId = setTimeout(() => refresh(state), 5000);
+  //     console.log('Timer id :', state.timerId)
+  //   })
+
+  // setTimeout(() => refresh(state), 5000);
 };
