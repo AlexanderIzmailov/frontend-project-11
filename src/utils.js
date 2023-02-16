@@ -5,6 +5,15 @@ import { parseRssPromise, setIdForUpdatedPosts, getNewPosts } from './parser.js'
 
 export const getFeedList = (state) => state.feeds.map(({ url }) => url);
 
+export const createPostsUiState = (posts) => posts.map((post) => ({ id: post.id, readed: false }));
+
+export const markAsViewed = (postId, state) => {
+  const isViewed = state.uiState.viewedPosts.includes(postId);
+  if (!isViewed) {
+    state.uiState.viewedPosts.push(postId);
+  }
+};
+
 export const getProxyLink = (url) => {
   const proxy = 'https://allorigins.hexlet.app';
   const resultUrl = new URL('get', proxy);
@@ -29,7 +38,10 @@ export const startUpdate = (state, delay) => {
       .then((newPostsLists) => setIdForUpdatedPosts(newPostsLists, state))
       .then((result) => {
         if (result.length) {
-          state.posts = result.concat(state.posts);
+          // state.posts = result.concat(state.posts);
+          state.posts.unshift(...result);
+          // state.uiState.posts.unshift( ...getPostsUiState(result) );
+          // onChange.target(state).uiState.posts.unshift( ...getPostsUiState(result) );
           state.autoUpdate.state = 'updated';
         } else {
           state.autoUpdate.state = 'noUpdate';

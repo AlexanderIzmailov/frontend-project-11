@@ -1,15 +1,12 @@
 import './styles.scss';
 import 'bootstrap';
-import {
-  object,
-  string,
-  setLocale,
-} from 'yup';
+// import onChange from 'on-change';
+import { object, string, setLocale } from 'yup';
 import i18n from 'i18next';
 import axios from 'axios';
 import watcher from './view.js';
 // import errorCodes from './errorCodes.js';
-import { codes, MyError } from './errorHandlers.js';
+import { errorCodes, MyError } from './errorHandlers.js';
 import { parseRssPromise, setIdsParsedRssPromise } from './parser.js';
 import { startUpdate, getProxyLink, getFeedList } from './utils.js';
 
@@ -26,6 +23,7 @@ export default async () => {
           successAdding: 'RSS успешно загружен',
           feedsTitle: 'Фиды',
           postsTitle: 'Посты',
+          postButton: 'Просмотр',
           errors: {
             notOneOf: 'RSS уже существует',
             url: 'Ссылка должна быть валидным URL',
@@ -47,6 +45,10 @@ export default async () => {
     autoUpdate: {
       state: null,
       delay: 5000,
+    },
+    uiState: {
+      viewedPosts: [],
+      idDisplayedModel: null,
     },
   };
 
@@ -95,15 +97,18 @@ export default async () => {
       .then((parsedRssWithIds) => {
         state.feeds.unshift(parsedRssWithIds.feed);
         state.posts.unshift(...parsedRssWithIds.posts);
+        // state.uiState.posts.unshift( ...createPostsUiState(parsedRssWithIds.posts) );
         state.rssForm.state = 'filling';
+
         if (!state.updateState) {
           state.updateState = true;
           startUpdate(state, state.autoUpdate.delay);
         }
+
         console.log('State: ', state);
       })
       .catch((err) => {
-        state.rssForm.error = codes[err.code];
+        state.rssForm.error = errorCodes[err.code];
         state.rssForm.state = 'failed';
       });
   });
@@ -127,5 +132,9 @@ export default async () => {
 
     // refresh(state);
     clearTimeout(state.timerId);
+
+    // onChange.target(state).uiState.posts.unshift('aaaa');
+    // state.target.uiState.posts.unshift('bbb')
+    // console.log('Without watcher :', state.uiState.posts)
   });
 };
