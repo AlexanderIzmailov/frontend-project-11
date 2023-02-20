@@ -56,8 +56,8 @@ const renderFeeds = (state, i18next) => {
   const feeds = document.querySelector('.feeds');
   feeds.innerHTML = '';
 
-  if (state.feeds.length > 0) {
-    const feedList = createListWrapper(feeds, i18next.t('feedsTitle'));
+  if (state.feeds.length) {
+    const feedList = createListWrapper(feeds, i18next.t('page.feedsTitle'));
 
     state.feeds.forEach(({ title, description }) => {
       const li = createElWithClassesAndText('li', ['list-group-item', 'border-0', 'border-end-0']);
@@ -86,11 +86,9 @@ const renderPosts = (state, i18next) => {
     return;
   }
 
-  const postsList = createListWrapper(posts, i18next.t('postsTitle'));
+  const postsList = createListWrapper(posts, i18next.t('page.postsTitle'));
 
-  state.posts.forEach(({
-    title, link, id,
-  }) => {
+  state.posts.forEach(({ title, link, id }) => {
     const li = createElWithClassesAndText(
       'li',
       [
@@ -114,7 +112,7 @@ const renderPosts = (state, i18next) => {
       markAsViewed(id, state);
     });
 
-    const button = createElWithClassesAndText('button', ['btn', 'btn-outline-primary', 'btn-sm'], i18next.t('postButton'));
+    const button = createElWithClassesAndText('button', ['btn', 'btn-outline-primary', 'btn-sm'], i18next.t('page.postButton'));
     button.setAttribute('type', 'button');
     button.setAttribute('data-id', id);
     button.setAttribute('data-bs-toggle', 'modal');
@@ -124,12 +122,6 @@ const renderPosts = (state, i18next) => {
       markAsViewed(id, state);
       state.uiState.idDisplayedModel = id;  // eslint-disable-line
     });
-
-    // [a, button].forEach((element) => {
-    //   element.addEventListener('click', () => {
-    //     markAsViewed(id, state);
-    //   })
-    // })
 
     li.appendChild(a);
     li.appendChild(button);
@@ -152,30 +144,22 @@ const renderModal = (id, state) => {
 
 export default (state, i18next) => {
   const watcher = onChange(state, (path, value, _previousValue, applyData) => {
-    // if (path === 'feeds') {
-    //   renderFeeds(watcher);
-    // }
-
-    // if (path === 'rssForm.error') {
-    //   setFeedback(watcher.rssForm.error, 'failed');
-    // }
-
     if (path === 'rssForm.state') {
-      if (value === 'filling') {
-        renderFeeds(watcher, i18next);
-        renderPosts(watcher, i18next);
-        setFeedback(i18next.t('successAdding'), 'success');
-        resetRssForm();
-        setActiveRssForm(true);
-      }
-
-      if (value === 'sending') {
-        setActiveRssForm(false);
-      }
-
-      if (value === 'failed') {
-        setFeedback(i18next.t(watcher.rssForm.error), 'failed');
-        setActiveRssForm(true);
+      switch (value) {
+        case 'sending':
+          setActiveRssForm(false);
+          break;
+        case 'failed':
+          setFeedback(i18next.t(watcher.rssForm.error), 'failed');
+          setActiveRssForm(true);
+          break;
+        case 'filling':
+        default:
+          renderFeeds(watcher, i18next);
+          renderPosts(watcher, i18next);
+          setFeedback(i18next.t('feedback.successAdding'), 'success');
+          resetRssForm();
+          setActiveRssForm(true);
       }
     }
 
@@ -186,7 +170,7 @@ export default (state, i18next) => {
     }
 
     if (path === 'uiState.viewedPosts') {
-    // if (path.match(/^(uiState.posts).*/)) {
+      // if (path.match(/^(uiState.posts).*/)) {
       const [id] = applyData.args;
       renderViewedPost(id);
     }

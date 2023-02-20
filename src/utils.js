@@ -1,6 +1,7 @@
 /*  eslint no-param-reassign: ["error", { "props": false }] */
 
 import axios from 'axios';
+import onChange from 'on-change';
 import { parseRssPromise, setIdForUpdatedPosts, getNewPosts } from './parser.js';
 
 export const getFeedList = (state) => state.feeds.map(({ url }) => url);
@@ -25,7 +26,7 @@ export const getProxyLink = (url) => {
 
 export const startUpdate = (state, delay) => {
   const update = (state, delay) => {  // eslint-disable-line
-    state.autoUpdate.state = 'pending';
+    onChange.target(state).autoUpdate.state = 'pending';
 
     const newPostsPromises = state.feeds.map((feed) => (
       axios.get(getProxyLink(new URL(feed.url)))
@@ -38,13 +39,10 @@ export const startUpdate = (state, delay) => {
       .then((newPostsLists) => setIdForUpdatedPosts(newPostsLists, state))
       .then((result) => {
         if (result.length) {
-          // state.posts = result.concat(state.posts);
-          state.posts.unshift(...result);
-          // state.uiState.posts.unshift( ...getPostsUiState(result) );
-          // onChange.target(state).uiState.posts.unshift( ...getPostsUiState(result) );
+          onChange.target(state).posts.unshift(...result);
           state.autoUpdate.state = 'updated';
         } else {
-          state.autoUpdate.state = 'noUpdate';
+          onChange.target(state).autoUpdate.state = 'noUpdate';
         }
       })
       .finally(() => {
@@ -52,7 +50,7 @@ export const startUpdate = (state, delay) => {
       });
   };
 
-  state.timerId = setTimeout(() => update(state, delay), delay);
+  onChange.target(state).timerId = setTimeout(() => update(state, delay), delay);
 
   // Promise.all(newPostsP)
   // .then((newPostsLists) => setIdsParsedRssPromise({ posts: newPostsLists.flat() }, state))

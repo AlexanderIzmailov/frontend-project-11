@@ -25,7 +25,7 @@ import { MyError } from './errorHandlers.js';
 // };
 
 export const parseRssPromise = (response) => {
-  const p = new Promise((resolve, reject) => {
+  const promise = new Promise((resolve, reject) => {
     const parser = new DOMParser();
     const parsedResponse = parser.parseFromString(response.data.contents, 'application/xml');
     const items = parsedResponse.querySelectorAll('item');
@@ -55,7 +55,7 @@ export const parseRssPromise = (response) => {
     resolve(result);
   });
 
-  return p;
+  return promise;
 };
 
 export const setIdsParsedRssPromise = (parsedRss, state) => {

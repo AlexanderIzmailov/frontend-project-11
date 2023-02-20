@@ -17,8 +17,8 @@ export class MyError extends Error {
 }
 
 export const errorCodes = {
-  ERR_NETWORK: 'errors.network',
-  ERR_NOT_ONE_OF: 'errors.notOneOf',
-  ERR_URL: 'errors.url',
-  ERR_MISSING_RSS: 'errors.rss',
+  ERR_NETWORK: 'feedback.errors.network',
+  ERR_NOT_ONE_OF: 'feedback.errors.notOneOf',
+  ERR_URL: 'feedback.errors.url',
+  ERR_MISSING_RSS: 'feedback.errors.rss',
 };

@@ -1,18 +1,34 @@
 import './styles.scss';
 import 'bootstrap';
-// import onChange from 'on-change';
 import { object, string, setLocale } from 'yup';
 import i18n from 'i18next';
 import axios from 'axios';
+import onChange from 'on-change';
 import watcher from './view.js';
-// import errorCodes from './errorCodes.js';
 import { errorCodes, MyError } from './errorHandlers.js';
 import { parseRssPromise, setIdsParsedRssPromise } from './parser.js';
 import { startUpdate, getProxyLink, getFeedList } from './utils.js';
 
 console.log('Start');
 
-export default async () => {
+const setTexts = (i18next) => {
+  const title = document.querySelector('#title');
+  title.textContent = i18next.t('page.title');
+
+  const addButton = document.querySelector('#addButton');
+  addButton.textContent = i18next.t('page.addButton');
+
+  const example = document.querySelector('#example');
+  example.textContent = `${i18next.t('page.exampleString')}: ${i18next.t('page.exampleFeed')}`;
+
+  const modalButtonRead = document.querySelector('#modalButtonRead');
+  modalButtonRead.textContent = i18next.t('modal.read');
+
+  const modalButtonClose = document.querySelector('#modalButtonClose');
+  modalButtonClose.textContent = i18next.t('modal.close');
+};
+
+const initializei18next = async () => {
   const i18next = i18n.createInstance();
   await i18next.init({
     lng: 'ru',
@@ -20,22 +36,44 @@ export default async () => {
     resources: {
       ru: {
         translation: {
-          successAdding: 'RSS успешно загружен',
-          feedsTitle: 'Фиды',
-          postsTitle: 'Посты',
-          postButton: 'Просмотр',
-          errors: {
-            notOneOf: 'RSS уже существует',
-            url: 'Ссылка должна быть валидным URL',
-            rss: 'Ресурс не содержит валидный RSS',
-            network: 'Ошибка сети',
+          feedback: {
+            successAdding: 'RSS успешно загружен',
+            errors: {
+              notOneOf: 'RSS уже существует',
+              url: 'Ссылка должна быть валидным URL',
+              rss: 'Ресурс не содержит валидный RSS',
+              network: 'Ошибка сети',
+            },
+          },
+          page: {
+            title: 'RSS агрегатор',
+            addButton: 'Добавить',
+            exampleString: 'Пример',
+            exampleFeed: 'https://ru.hexlet.io/lessons.rss',
+            feedsTitle: 'Фиды',
+            postsTitle: 'Посты',
+            postButton: 'Просмотр',
+          },
+          modal: {
+            read: 'Читать полностью',
+            close: 'Закрыть',
           },
         },
       },
     },
   });
 
+  setTexts(i18next);
+
+  return i18next;
+};
+
+export default async () => {
+  const i18next = await initializei18next();
+
+  // initialize state
   const initialState = {
+    test: null,
     rssForm: {
       error: null,
       state: 'filling',
@@ -54,6 +92,7 @@ export default async () => {
 
   const state = watcher(initialState, i18next);
 
+  // initialize yup
   setLocale({
     mixed: {
       // notOneOf: 'errors.alreadyExist',
@@ -77,7 +116,7 @@ export default async () => {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    initialState.rssForm.state = null;
+    onChange.target(state).rssForm.state = null;
 
     const feedList = getFeedList(state);
 
@@ -95,13 +134,12 @@ export default async () => {
       .then((response) => parseRssPromise(response))
       .then((parsedRss) => setIdsParsedRssPromise(parsedRss, state))
       .then((parsedRssWithIds) => {
-        state.feeds.unshift(parsedRssWithIds.feed);
-        state.posts.unshift(...parsedRssWithIds.posts);
-        // state.uiState.posts.unshift( ...createPostsUiState(parsedRssWithIds.posts) );
+        onChange.target(state).feeds.unshift(parsedRssWithIds.feed);
+        onChange.target(state).posts.unshift(...parsedRssWithIds.posts);
         state.rssForm.state = 'filling';
 
         if (!state.updateState) {
-          state.updateState = true;
+          onChange.target(state).updateState = true;
           startUpdate(state, state.autoUpdate.delay);
         }
 
@@ -114,27 +152,9 @@ export default async () => {
   });
 
   // Test
-  const testButton = document.querySelector('#test-button');
-  testButton.addEventListener('click', () => {
-    // const origin = 'https://allorigins.hexlet.app/get?disableCache=true&url=';
-    // const address = 'https://example.com';
-    // axios.get(`${origin}${address}`)
-    //   .then((res) => {
-    //     const data = res.data.contents;
-    //     const parser = new DOMParser();
-    //     const doc1 = parser.parseFromString(data, 'application/xml');
-    //     const items = doc1.querySelectorAll('item');
-    //     items.forEach((item) => {
-    //       console.log(item.querySelector('title').textContent);
-    //     });
-    //     console.log(res.data);
-    //   });
-
-    // refresh(state);
-    clearTimeout(state.timerId);
-
-    // onChange.target(state).uiState.posts.unshift('aaaa');
-    // state.target.uiState.posts.unshift('bbb')
-    // console.log('Without watcher :', state.uiState.posts)
-  });
+  // const testButton = document.querySelector('#test-button');
+  // testButton.addEventListener('click', () => {
+  //   clearTimeout(state.timerId);
+  //   // onChange.target(state).uiState.posts.unshift('aaaa');
+  // });
 };
