@@ -86,7 +86,7 @@ export default async () => {
     },
     uiState: {
       viewedPosts: [],
-      idDisplayedModel: null,
+      idDisplayedModal: null,
     },
   };
 
@@ -116,7 +116,8 @@ export default async () => {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    onChange.target(state).rssForm.state = null;
+    // onChange.target(state).rssForm.state = null;
+    state.rssForm.state = 'sending';
 
     const feedList = getFeedList(state);
 
@@ -127,10 +128,7 @@ export default async () => {
     const formData = new FormData(e.target);
 
     urlSchema.validate(Object.fromEntries(formData))
-      .then((validated) => {
-        state.rssForm.state = 'sending';
-        return axios.get(getProxyLink(validated.url));
-      })
+      .then((validated) => axios.get(getProxyLink(validated.url)))
       .then((response) => parseRssPromise(response))
       .then((parsedRss) => setIdsParsedRssPromise(parsedRss, state))
       .then((parsedRssWithIds) => {
