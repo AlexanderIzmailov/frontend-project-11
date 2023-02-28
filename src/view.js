@@ -1,6 +1,23 @@
 import onChange from 'on-change';
 import { markAsViewed } from './utils.js';
 
+export const setTexts = (i18next) => {
+  const title = document.querySelector('#title');
+  title.textContent = i18next.t('page.title');
+
+  const addButton = document.querySelector('#addButton');
+  addButton.textContent = i18next.t('page.addButton');
+
+  const example = document.querySelector('#example');
+  example.textContent = `${i18next.t('page.exampleString')}: ${i18next.t('page.exampleFeed')}`;
+
+  const modalButtonRead = document.querySelector('#modalButtonRead');
+  modalButtonRead.textContent = i18next.t('modal.read');
+
+  const modalButtonClose = document.querySelector('#modalButtonClose');
+  modalButtonClose.textContent = i18next.t('modal.close');
+};
+
 const setActiveRssForm = (isActive) => {
   const button = document.querySelector('button[aria-label="add"]');
   if (isActive) {

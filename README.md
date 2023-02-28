@@ -3,4 +3,6 @@
 
 [![Maintainability](https://api.codeclimate.com/v1/badges/2e062450a3305d0ad607/maintainability)](https://codeclimate.com/github/AlexanderIzmailov/frontend-project-11/maintainability)
 
-Vercel: https://frontend-project-11-jfchtmbzf-alexanderizmailov.vercel.app/
+# RSS reader.
+
+Demo: https://frontend-project-11-jfchtmbzf-alexanderizmailov.vercel.app/

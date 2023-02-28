@@ -4,66 +4,27 @@ import { object, string, setLocale } from 'yup';
 import i18n from 'i18next';
 import axios from 'axios';
 import onChange from 'on-change';
-import watcher from './view.js';
+import resources from './locales/index.js';
+import watcher, { setTexts } from './view.js';
 import { errorCodes, MyError } from './errorHandlers.js';
 import { parseRssPromise, setIdsParsedRssPromise } from './parser.js';
 import { startUpdate, getProxyLink, getFeedList } from './utils.js';
 
 console.log('Start');
 
-const setTexts = (i18next) => {
-  const title = document.querySelector('#title');
-  title.textContent = i18next.t('page.title');
-
-  const addButton = document.querySelector('#addButton');
-  addButton.textContent = i18next.t('page.addButton');
-
-  const example = document.querySelector('#example');
-  example.textContent = `${i18next.t('page.exampleString')}: ${i18next.t('page.exampleFeed')}`;
-
-  const modalButtonRead = document.querySelector('#modalButtonRead');
-  modalButtonRead.textContent = i18next.t('modal.read');
-
-  const modalButtonClose = document.querySelector('#modalButtonClose');
-  modalButtonClose.textContent = i18next.t('modal.close');
-};
-
 const initializei18next = async () => {
+  const lng = 'ru';
   const i18next = i18n.createInstance();
-  await i18next.init({
-    lng: 'ru',
-    defub: true,
-    resources: {
-      ru: {
-        translation: {
-          feedback: {
-            successAdding: 'RSS успешно загружен',
-            errors: {
-              notOneOf: 'RSS уже существует',
-              url: 'Ссылка должна быть валидным URL',
-              rss: 'Ресурс не содержит валидный RSS',
-              network: 'Ошибка сети',
-            },
-          },
-          page: {
-            title: 'RSS агрегатор',
-            addButton: 'Добавить',
-            exampleString: 'Пример',
-            exampleFeed: 'https://ru.hexlet.io/lessons.rss',
-            feedsTitle: 'Фиды',
-            postsTitle: 'Посты',
-            postButton: 'Просмотр',
-          },
-          modal: {
-            read: 'Читать полностью',
-            close: 'Закрыть',
-          },
-        },
-      },
-    },
-  });
 
-  setTexts(i18next);
+  await i18next
+    .init({
+      lng,
+      debug: false,
+      resources,
+    })
+    .then(() => {
+      setTexts(i18next);
+    });
 
   return i18next;
 };
@@ -95,9 +56,7 @@ export default async () => {
   // initialize yup
   setLocale({
     mixed: {
-      // notOneOf: 'errors.alreadyExist',
       notOneOf: () => {
-        // throw { msg: 'errors.alreadyExist', code: 'ERR_NOT_ONE_OF' }
         throw new MyError('ERR_NOT_ONE_OF');
       },
     },
@@ -116,7 +75,6 @@ export default async () => {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // onChange.target(state).rssForm.state = null;
     state.rssForm.state = 'sending';
 
     const feedList = getFeedList(state);
@@ -134,6 +92,7 @@ export default async () => {
       .then((parsedRssWithIds) => {
         onChange.target(state).feeds.unshift(parsedRssWithIds.feed);
         onChange.target(state).posts.unshift(...parsedRssWithIds.posts);
+
         state.rssForm.state = 'filling';
 
         if (!state.updateState) {
@@ -144,12 +103,12 @@ export default async () => {
         console.log('State: ', state);
       })
       .catch((err) => {
-        state.rssForm.error = errorCodes[err.code];
+        onChange.target(state).rssForm.error = errorCodes[err.code];
         state.rssForm.state = 'failed';
       });
   });
 
-  // Test
+  // Test button
   // const testButton = document.querySelector('#test-button');
   // testButton.addEventListener('click', () => {
   //   clearTimeout(state.timerId);
